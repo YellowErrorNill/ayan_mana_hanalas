@@ -1,15 +1,23 @@
+
+@media only screen and (max-width: 391px) and (orientation: portrait) {
+  .container {
+    width: 100%;
+    padding: 16px;
+  }
+  body{
+   
+  }
+}
+
 body{
-    height: 2000px;
+    /* height: 2000px; */
+    margin: 0;
 }
 .blur-on-scroll {
-  /* Привязываем анимацию к прогрессу видимости элемента в окне */
-  animation: blur-effect linear both;
+   animation: blur-effect linear both;
   animation-timeline: view();
   
-  /* Настраиваем диапазон: 
-     exit 0% — элемент начал уходить за верхний край экрана
-     exit 100% — элемент полностью скрылся */
-  animation-range: exit 0% exit 100%;
+   animation-range: exit 0% exit 100%;
 }
 
 @keyframes blur-effect {
@@ -20,5 +28,10 @@ body{
   to {
     filter: blur(12px);
     opacity: 0.2;
+  }
+}
+@media (orientation: portrait) {
+  .container {
+    flex-direction: column;
   }
 }
