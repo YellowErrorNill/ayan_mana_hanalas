@@ -84,41 +84,8 @@ const ULUS_BOUNDS = [
   [62.5500, 131.6500]
 ];
 
-// Список точек улуса
-const places = [
-  {
-    id: 1,
-    name: 'пгт Нижний Бестях',
-    category: 'transport',
-    coords: [61.9585, 129.9100],
-    description: 'Административный центр улуса, ЖД-вокзал и переправа.',
-    preset: 'islands#blueRailwayIcon'
-  },
-  {
-    id: 2,
-    name: 'село Майя',
-    category: 'center',
-    coords: [61.7370, 130.2785],
-    description: 'Крупнейшее село улуса, культурный и исторический центр.',
-    preset: 'islands#greenDotIcon'
-  },
-  {
-    id: 3,
-    name: 'село Тюнгюлю',
-    category: 'center',
-    coords: [62.1965, 130.7280],
-    description: 'Крупный населённый пункт на трассе «Колыма».',
-    preset: 'islands#greenDotIcon'
-  },
-  {
-    id: 4,
-    name: 'село Павловск',
-    category: 'culture',
-    coords: [61.8835, 129.8390],
-    description: 'Нерюктяйинский наслег, берег реки Лены.',
-    preset: 'islands#orangeLeisureIcon'
-  }
-];
+// Точки улуса загружаются из базы (GET /places)
+const places = ref([]);
 
 // Загрузчик скрипта Яндекс Карт JS API 2.1
 function loadYandexMaps(apiKey) {
@@ -163,10 +130,10 @@ function initMap() {
     gridSize: 32
   });
 
-  // Формируем GeoJSON из массива places
+  // Формируем GeoJSON из точек, загруженных из базы
   const featureCollection = {
     type: 'FeatureCollection',
-    features: places.map((place) => ({
+    features: places.value.map((place) => ({
       type: 'Feature',
       id: place.id,
       geometry: {
@@ -207,7 +174,7 @@ function handleBalloonClick(event) {
 
   const action = button.dataset.action;
   const placeId = Number(button.dataset.id);
-  const place = places.find((p) => p.id === placeId);
+  const place = places.value.find((p) => p.id === placeId);
   if (!place) return;
 
   if (action === 'set-start') {
@@ -223,7 +190,7 @@ function handleBalloonClick(event) {
 const searchResults = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return [];
-  return places.filter((p) =>
+  return places.value.filter((p) =>
     p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)
   );
 });
@@ -292,6 +259,12 @@ function clearRoute() {
 }
 
 onMounted(async () => {
+  try {
+    const res = await fetch('http://127.0.0.1:8000/places');
+    places.value = await res.json();
+  } catch (err) {
+    console.error('Не удалось загрузить места:', err);
+  }
   await loadYandexMaps(props.apiKey);
   initMap();
   mapContainer.value?.addEventListener('click', handleBalloonClick);

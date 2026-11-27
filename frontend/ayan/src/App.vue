@@ -1,10 +1,30 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { auth, clearAuth } from './store'
 
+const router = useRouter()
 const menuOpen = ref(false)
+const loggedIn = computed(() => !!auth.token)
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+}
 
 function closeMenu() {
   menuOpen.value = false
+}
+
+async function logout() {
+  if (auth.token) {
+    await fetch('http://127.0.0.1:8000/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+  }
+  clearAuth()
+  closeMenu()
+  router.push('/auth')
 }
 </script>
 <template>
@@ -13,7 +33,7 @@ function closeMenu() {
       class="burger"
       :class="{ open: menuOpen }"
       aria-label="Меню"
-      @click="menuOpen = !menuOpen"
+      @click="toggleMenu"
     >
       <span></span>
       <span></span>
@@ -29,6 +49,7 @@ function closeMenu() {
     <router-link to="/auth" @click="closeMenu">Вход</router-link>
     <router-link to="/cart" @click="closeMenu">Карточки</router-link>
     <router-link to="/profile" @click="closeMenu">Профиль</router-link>
+    <button v-if="loggedIn" class="logout-btn" @click="logout">Выход</button>
   </nav>
 
   <router-view />
@@ -136,5 +157,17 @@ body {
 .menu a.router-link-active {
   color: #cafb87;
   font-weight: 700;
+}
+
+.logout-btn {
+  margin-top: 12px;
+  padding: 12px 8px;
+  border: none;
+  border-bottom: 1px solid #454645;
+  background: none;
+  color: #ff8a94;
+  font-size: 17px;
+  text-align: left;
+  cursor: pointer;
 }
 </style>

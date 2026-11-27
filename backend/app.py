@@ -37,6 +37,8 @@ class User(Base):
   id: Mapped[int] = mapped_column(primary_key=True)
   username: Mapped[str] = mapped_column(String(30), unique=True)
   password_hash: Mapped[str] = mapped_column(String(255))
+  first_name: Mapped[str] = mapped_column(String(50), default="")
+  last_name: Mapped[str] = mapped_column(String(50), default="")
 
 
 class Token(Base):
@@ -56,6 +58,19 @@ class SavedPlace(Base):
   user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
   card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"))
   visited: Mapped[bool] = mapped_column(default=False)
+
+
+class Place(Base):
+
+  __tablename__ = "places"
+
+  id: Mapped[int] = mapped_column(primary_key=True)
+  name: Mapped[str] = mapped_column(String(100))
+  category: Mapped[str] = mapped_column(String(30), default="center")
+  lat: Mapped[float] = mapped_column()
+  lon: Mapped[float] = mapped_column()
+  description: Mapped[str] = mapped_column(String(500), default="")
+  preset: Mapped[str] = mapped_column(String(50), default="islands#greenDotIcon")
   
 
 
@@ -67,7 +82,31 @@ Base.metadata.create_all(engine)
 
 
 with Session(engine) as session:
-  ...
+  if session.scalar(select(Place).limit(1)) is None:
+    session.add_all([
+      Place(name="пгт Нижний Бестях", category="transport", lat=61.9585, lon=129.9100,
+            description="Административный центр улуса, ЖД-вокзал и переправа.",
+            preset="islands#blueRailwayIcon"),
+      Place(name="село Майя", category="center", lat=61.7370, lon=130.2785,
+            description="Крупнейшее село улуса, культурный и исторический центр.",
+            preset="islands#greenDotIcon"),
+      Place(name="село Тюнгюлю", category="center", lat=62.1965, lon=130.7280,
+            description="Крупный населённый пункт на трассе «Колыма».",
+            preset="islands#greenDotIcon"),
+      Place(name="село Павловск", category="culture", lat=61.8835, lon=129.8390,
+            description="Нерюктяйинский наслег, берег реки Лены.",
+            preset="islands#orangeLeisureIcon"),
+      Place(name="Памятник Василию Манчаары", category="culture", lat=61.958066, lon=129.908433,
+            description="Нерюктяйинский наслег, берег реки Лены.",
+            preset="islands#orangeLeisureIcon"),
+      Place(name="Церковь Благовещения Пресвятой Богородицы", category="culture", lat=61.957356, lon=129.906896,
+            description="Нерюктяйинский наслег, берег реки Лены.",
+            preset="islands#orangeLeisureIcon"),
+      Place(name="Техтюрский музей истории и краеведения", category="culture", lat=61.964720, lon=129.913650,
+            description="Нерюктяйинский наслег, берег реки Лены.",
+            preset="islands#orangeLeisureIcon"),
+    ])
+    session.commit()
   
 
   
@@ -90,6 +129,8 @@ async def read_root():
 class AuthData(BaseModel):
     username: str
     password: str
+    first_name: str = ""
+    last_name: str = ""
 
 
 def hash_password(password: str, salt: str = "") -> str:
@@ -117,7 +158,12 @@ async def register(data: AuthData):
     with Session(engine) as session:
         if session.scalar(select(User).where(User.username == data.username)):
             raise HTTPException(status_code=400, detail="Пользователь уже существует")
-        user = User(username=data.username, password_hash=hash_password(data.password))
+        user = User(
+            username=data.username,
+            password_hash=hash_password(data.password),
+            first_name=data.first_name,
+            last_name=data.last_name,
+        )
         session.add(user)
         session.commit()
         return {"message": "Регистрация успешна"}
@@ -159,6 +205,23 @@ async def get_cards():
     with Session(engine) as session:
         cards = session.scalars(select(CarD)).all()
         return [card_to_dict(c) for c in cards]
+
+
+@app.get("/places")
+async def get_places():
+    with Session(engine) as session:
+        places = session.scalars(select(Place)).all()
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "category": p.category,
+                "coords": [p.lat, p.lon],
+                "description": p.description,
+                "preset": p.preset,
+            }
+            for p in places
+        ]
 
 
 def card_to_dict(c: CarD) -> dict:
@@ -261,6 +324,14 @@ class SavedPlaceAdmin(ModelView, model=SavedPlace):
 
 SavedPlaceAdmin.identity = "saved"
 admin.add_view(SavedPlaceAdmin)
+
+
+class PlaceAdmin(ModelView, model=Place):
+    column_list = [Place.id, Place.name, Place.category, Place.lat, Place.lon, Place.description, Place.preset]
+
+
+PlaceAdmin.identity = "places"
+admin.add_view(PlaceAdmin)
 
 
 

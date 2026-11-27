@@ -1,38 +1,57 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { auth, setAuth, clearAuth } from '../store'
 
 const API = 'http://127.0.0.1:8000'
 
-const regUsername = ref('')
-const regPassword = ref('')
-const loginUsername = ref('')
-const loginPassword = ref('')
+const activeTab = ref('login') // 'login' | 'register'
 const message = ref('')
-const currentUser = ref(localStorage.getItem('username') || '')
-const token = ref(localStorage.getItem('token') || '')
+
+const loginEmail = ref('')
+const loginPassword = ref('')
+
+const regFirstName = ref('')
+const regLastName = ref('')
+const regEmail = ref('')
+const regPassword = ref('')
+
+const currentUser = computed(() => auth.username)
+
+function switchTab(tab) {
+  activeTab.value = tab
+  message.value = ''
+}
 
 async function register() {
   const res = await fetch(`${API}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: regUsername.value, password: regPassword.value }),
+    body: JSON.stringify({
+      username: regEmail.value,
+      password: regPassword.value,
+      first_name: regFirstName.value,
+      last_name: regLastName.value,
+    }),
   })
   const data = await res.json()
-  message.value = data.detail || data.message
+  if (res.ok) {
+    message.value = 'Регистрация успешна — теперь войдите'
+    activeTab.value = 'login'
+    loginEmail.value = regEmail.value
+  } else {
+    message.value = data.detail || 'Ошибка регистрации'
+  }
 }
 
 async function login() {
   const res = await fetch(`${API}/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: loginUsername.value, password: loginPassword.value }),
+    body: JSON.stringify({ username: loginEmail.value, password: loginPassword.value }),
   })
   const data = await res.json()
   if (res.ok) {
-    token.value = data.token
-    currentUser.value = data.username
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('username', data.username)
+    setAuth(data.token, data.username)
     message.value = ''
   } else {
     message.value = data.detail
@@ -42,67 +61,159 @@ async function login() {
 async function logout() {
   await fetch(`${API}/logout`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token.value}` },
+    headers: { Authorization: `Bearer ${auth.token}` },
   })
-  token.value = ''
-  currentUser.value = ''
-  localStorage.removeItem('token')
-  localStorage.removeItem('username')
+  clearAuth()
 }
 </script>
 
 <template>
-  <div v-if="!currentUser">
-    <h2>Регистрация</h2>
-    <input v-model="regUsername" placeholder="E-mail">
-    <input v-model="regPassword" type="password" placeholder="Пароль">
-    <button @click="register">Зарегистрироваться</button>
+  <div class="auth">
+    <div class="band band-top"></div>
 
-    <h2>Вход</h2>
-    <input v-model="loginUsername" placeholder="E-mail">
-    <input v-model="loginPassword" type="password" placeholder="Пароль">
-    <button @click="login">Войти</button>
+    <div v-if="currentUser" class="logged-in">
+      <p>Вы вошли как {{ currentUser }}</p>
+      <button class="submit-btn" @click="logout">Выйти</button>
+    </div>
 
-    <p>{{ message }}</p>
-  </div>
+    <div v-else class="auth-form">
+      <div class="tabs">
+        <button :class="['tab', { active: activeTab === 'login' }]" @click="switchTab('login')">
+          Вход
+        </button>
+        <button :class="['tab', { active: activeTab === 'register' }]" @click="switchTab('register')">
+          Регистрация
+        </button>
+      </div>
 
-  <div v-else>
-    <p>Вы вошли как {{ currentUser }}</p>
-    <button @click="logout">Выйти</button>
+      <form v-if="activeTab === 'login'" class="fields" @submit.prevent="login">
+        <input v-model="loginEmail" type="email" placeholder="E-mail" required>
+        <input v-model="loginPassword" type="password" placeholder="Пароль" required>
+        <button type="submit" class="submit-btn">Войти</button>
+      </form>
+
+      <form v-else class="fields" @submit.prevent="register">
+        <h3 class="section-title">Личные данные</h3>
+        <input v-model="regFirstName" type="text" placeholder="Имя" required>
+        <input v-model="regLastName" type="text" placeholder="Фамилия" required>
+
+        <h3 class="section-title">Данные для входа</h3>
+        <input v-model="regEmail" type="email" placeholder="E-mail" required>
+        <input v-model="regPassword" type="password" placeholder="Пароль" required>
+        <button type="submit" class="submit-btn">Зарегистрироваться</button>
+      </form>
+
+      <p v-if="message" class="message">{{ message }}</p>
+    </div>
+
+    <div class="band band-bottom"></div>
   </div>
 </template>
 
 <style scoped>
-div {
-  padding: 8px 16px;
+.auth {
+  min-height: calc(100dvh - 68px);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Cousine', monospace;
+  background: #383938;
 }
 
-input {
-  display: block;
-  margin-bottom: 8px;
-  padding: 9px 12px;
-  border: 1px solid #555;
-  border-radius: 6px;
-  background: #2c2d2c;
+.band {
+  flex-shrink: 0;
+  height: 80px;
+  background: #383938 url('/design/pixel-band.png') repeat-x top / auto 100%;
+}
+
+.band-bottom {
+  margin-top: auto;
+  transform: scaleY(-1);
+}
+
+.auth-form,
+.logged-in {
+  width: 316px;
+  max-width: calc(100% - 32px);
+  margin: 60px auto 40px;
+}
+
+.tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.tab {
+  padding: 0 0 6px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #cafb87;
+  font-family: 'Cousine', monospace;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-bottom-color: #cafb87;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.section-title {
+  margin: 14px 0 2px;
+  color: #cafb87;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.fields input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 50px;
+  padding: 0 17px;
+  border: 1px solid #cdcdcd;
+  border-radius: 0;
+  background: transparent;
   color: #eee;
-  font-size: 14px;
+  font-family: 'Cousine', monospace;
+  font-size: 16px;
 }
 
-input:focus {
+.fields input::placeholder {
+  color: #cdcdcd;
+}
+
+.fields input:focus {
   outline: none;
   border-color: #cafb87;
 }
 
-button {
-  padding: 9px 16px;
-  border: 1px solid #cafb87;
+.submit-btn {
+  width: 100%;
+  height: 44px;
+  margin-top: 16px;
+  border: none;
   border-radius: 0;
-  background: transparent;
-  color: #cafb87;
+  background: #cafb87;
+  color: #383938;
+  font-family: 'Cousine', monospace;
+  font-size: 16px;
   cursor: pointer;
 }
 
-h2 {
+.message {
+  margin-top: 16px;
+  color: #cafb87;
+  font-size: 14px;
+}
+
+.logged-in p {
   color: #eee;
+  font-size: 16px;
 }
 </style>
