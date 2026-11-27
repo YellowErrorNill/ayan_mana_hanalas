@@ -1,8 +1,8 @@
 <template>
   <div class="map-wrapper">
-    <!-- Панель фильтрации и управления -->
+    <!--  -->
     <div class="toolbar">
-      <!-- Поиск по местам -->
+      
       <div class="search-row" @focusout="onSearchFocusOut">
         <input
           v-model="searchQuery"
@@ -43,7 +43,7 @@
       </div>
     </div>
 
-    <!-- Контейнер карты -->
+    
     <div ref="mapContainer" class="map-container"></div>
   </div>
 </template>
@@ -70,7 +70,7 @@ let myMap = null;
 let objectManager = null;
 let currentRoute = null;
 
-// Категории для панели фильтров
+
 const categories = [
   { value: 'all', label: 'Все объекты' },
   { value: 'transport', label: 'Транспорт и узлы' },
@@ -78,13 +78,13 @@ const categories = [
   { value: 'culture', label: 'Культура и отдых' }
 ];
 
-// Границы Мегино-Кангаласского улуса: [[юго-запад], [северо-восток]]
+
 const ULUS_BOUNDS = [
   [60.8500, 129.6000],
   [62.5500, 131.6500]
 ];
 
-// Точки улуса загружаются из базы (GET /places)
+
 const places = ref([]);
 
 // Загрузчик скрипта Яндекс Карт JS API 2.1
@@ -119,7 +119,7 @@ function initMap() {
       controls: ['zoomControl', 'typeSelector', 'fullscreenControl']
     },
     {
-      restrictMapArea: ULUS_BOUNDS, // Жёсткое ограничение области улуса
+      restrictMapArea: ULUS_BOUNDS, 
       minZoom: 8,
       maxZoom: 18
     }
@@ -130,7 +130,7 @@ function initMap() {
     gridSize: 32
   });
 
-  // Формируем GeoJSON из точек, загруженных из базы
+  
   const featureCollection = {
     type: 'FeatureCollection',
     features: places.value.map((place) => ({
@@ -167,7 +167,7 @@ function initMap() {
   myMap.geoObjects.add(objectManager);
 }
 
-// Обработчик кликов по кнопкам внутри балуна (делегирование событий во Vue)
+
 function handleBalloonClick(event) {
   const button = event.target.closest('button[data-action]');
   if (!button) return;
@@ -186,7 +186,7 @@ function handleBalloonClick(event) {
   }
 }
 
-// Поиск по местам
+
 const searchResults = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return [];
@@ -200,8 +200,7 @@ function selectPlace(place) {
   searchOpen.value = false;
   if (!myMap || !objectManager) return;
 
-  // если место скрыто фильтром категорий — сбрасываем фильтр
-  if (selectedCategory.value !== 'all' && place.category !== selectedCategory.value) {
+    if (selectedCategory.value !== 'all' && place.category !== selectedCategory.value) {
     applyFilter('all');
   }
 
@@ -210,13 +209,12 @@ function selectPlace(place) {
 }
 
 function onSearchFocusOut(e) {
-  // закрываем список, только если фокус ушёл за пределы блока поиска
+  
   if (!e.currentTarget.contains(e.relatedTarget)) {
     searchOpen.value = false;
   }
 }
 
-// Фильтрация объектов
 function applyFilter(category) {  selectedCategory.value = category;
   if (!objectManager) return;
 
@@ -227,7 +225,7 @@ function applyFilter(category) {  selectedCategory.value = category;
   }
 }
 
-// Построение маршрута
+// Построение маршрута НЕ РАБОТАЕТ
 function buildRouteTo(destCoords) {
   if (!myMap || !window.ymaps) return;
   clearRoute();

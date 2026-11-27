@@ -8,10 +8,10 @@ const loading = ref(true)
 const error = ref('')
 const notice = ref('')
 
-// состояние перетаскивания верхней карточки
+// верхней карточки
 const dragX = ref(0)
 const dragging = ref(false)
-const flying = ref('') // 'left' | 'right' | ''
+const flying = ref('') 
 let startX = 0
 
 const topCard = computed(() => cards.value[0])
@@ -102,8 +102,7 @@ const cardStyle = computed(() => ({
     <p v-else-if="error" class="deck-msg">{{ error }}</p>
 
     <div v-else-if="topCard" class="deck-inner">
-      <!-- следующая карточка на фоне -->
-      <div v-if="nextCard" class="card card-behind">
+            <div v-if="nextCard" class="card card-behind">
         <div class="band band-top"></div>
         <div class="lime">
           <div class="card-photo" :style="{ backgroundImage: `url(${photoUrl(nextCard)})` }"></div>
@@ -111,8 +110,7 @@ const cardStyle = computed(() => ({
         <div class="band band-bottom"></div>
       </div>
 
-      <!-- верхняя карточка -->
-      <div
+            <div
         class="card"
         :style="cardStyle"
         @pointerdown="onPointerDown"
